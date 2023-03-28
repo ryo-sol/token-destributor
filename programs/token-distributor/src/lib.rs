@@ -32,13 +32,14 @@ pub mod token_distributor {
                     ctx.accounts.token_mint.key().as_ref(),
                     &[*ctx.bumps.get("vault").unwrap()],
                 ]]))?;
-
+                
                 
         // setup vault account
         ctx.accounts.vault.claim_size = claim_size;
         ctx.accounts.vault.mint = ctx.accounts.token_mint.key();
         ctx.accounts.vault.authority = ctx.accounts.payer.key();
         ctx.accounts.vault.bump = *ctx.bumps.get("vault").unwrap();
+
 
         // transfer initial supply
         transfer(
@@ -58,6 +59,12 @@ pub mod token_distributor {
     }
 
     pub fn claim(ctx: Context<ClaimAccounts>) -> Result<()> {
+        
+        msg!("My bump is {} ", ctx.accounts.vault.bump);
+        msg!("My key is {} ", ctx.accounts.vault.authority.key());
+        msg!("My vault is {} ", ctx.accounts.vault.authority);
+
+
         // transfer claim to user account
         let mut amount = ctx.accounts.vault.claim_size;
         // todo: amount = min(claim_size, available_tokens)
@@ -72,7 +79,7 @@ pub mod token_distributor {
                 &[&[
                     "vault".as_bytes(),
                     ctx.accounts.vault.authority.key().as_ref(),
-                    ctx.accounts.token_mint.key().as_ref(),
+                    ctx.accounts.vault.mint.key().as_ref(),
                     &[ctx.accounts.vault.bump],
                 ]],
             ),
@@ -115,7 +122,7 @@ pub struct CreateAccounts<'info> {
 #[derive(Accounts)]
 pub struct ClaimAccounts<'info> {
     pub token_mint: Account<'info, Mint>,
-    #[account(mut, token::mint = token_mint, token::authority = user)]
+    #[account(mut, token::mint = token_mint, token::authority = user)] //init_if_needed, payer = user, 
     pub user_token_account: Account<'info, TokenAccount>,
 
     #[account(mut)]
@@ -125,13 +132,14 @@ pub struct ClaimAccounts<'info> {
     // to prevent double claim we create this account
     pub user_claimed: Account<'info, ClaimedAccount>,
 
-    #[account(mut)]
+    #[account(mut, seeds = [b"vault", vault.authority.key().as_ref(), token_mint.key().as_ref()], bump = vault.bump)]
     pub vault: Account<'info, VaultAccount>,
 
     #[account(mut, token::mint = token_mint, token::authority = vault)]
     pub vault_token_account: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
+    //pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
