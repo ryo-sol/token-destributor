@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::*;
+use anchor_spl::associated_token::AssociatedToken;
 
 declare_id!("TDP82b6Vad2W8zxQGfgQ7oDxM6XTpWCg6ncdRjC9Lvx");
 
@@ -12,12 +13,32 @@ pub mod token_distributor {
         initial_supply: u64,
         claim_size: u64,
     ) -> Result<()> {
+
+        // initialize token account 
+        // we need to do this manally because we need to provide the signature from the pda
+        anchor_spl::associated_token::create(CpiContext::new_with_signer(
+            ctx.accounts.associated_token_program.to_account_info(),
+            anchor_spl::associated_token::Create {
+                payer: ctx.accounts.payer.to_account_info(),
+                associated_token: ctx.accounts.vault_token_account.to_account_info(),
+                authority: ctx.accounts.vault.to_account_info(),
+                mint: ctx.accounts.token_mint.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                token_program: ctx.accounts.token_program.to_account_info()
+              },
+              &[&[
+                    "vault".as_bytes(),
+                    ctx.accounts.payer.key().as_ref(),
+                    ctx.accounts.token_mint.key().as_ref(),
+                    &[*ctx.bumps.get("vault").unwrap()],
+                ]]))?;
+
+                
         // setup vault account
-        let vault_account = &mut ctx.accounts.vault;
-        vault_account.claim_size = claim_size;
-        vault_account.mint = ctx.accounts.token_mint.key();
-        vault_account.authority = ctx.accounts.payer.key();
-        vault_account.bump = *ctx.bumps.get("vault").unwrap();
+        ctx.accounts.vault.claim_size = claim_size;
+        ctx.accounts.vault.mint = ctx.accounts.token_mint.key();
+        ctx.accounts.vault.authority = ctx.accounts.payer.key();
+        ctx.accounts.vault.bump = *ctx.bumps.get("vault").unwrap();
 
         // transfer initial supply
         transfer(
@@ -32,7 +53,7 @@ pub mod token_distributor {
             initial_supply,
         )?;
 
-        msg!("Vault {} successfully created!", vault_account.key());
+        msg!("Vault {} successfully created!", ctx.accounts.vault.key());
         Ok(())
     }
 
@@ -79,12 +100,15 @@ pub struct CreateAccounts<'info> {
     #[account(init, space = VAULT_ACCOUNT_SIZE, payer = payer,  seeds = [b"vault", payer.key().as_ref(), token_mint.key().as_ref()], bump)]
     pub vault: Account<'info, VaultAccount>,
 
-    #[account(init_if_needed, payer = payer, token::mint = token_mint, token::authority = vault)]
-    pub vault_token_account: Account<'info, TokenAccount>,
+    /// CHECK: This is safe because the instruction will fail if the account is already initialized
+    /// I wouldn't know how else to do this, init doesn't work becuase I need to provide signer seeds
+    #[account(mut)]
+    pub vault_token_account: UncheckedAccount<'info>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
     pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
