@@ -1,14 +1,14 @@
 [features]
 seeds = false
 skip-lint = false
-[programs.localnet]
+[programs.devnet]
 token_distributor = "TDP82b6Vad2W8zxQGfgQ7oDxM6XTpWCg6ncdRjC9Lvx"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "../RyodwrS9UMNJQ2pQuYGiyPW89TST25rKcEL13FneE42.json"
 
 [scripts]

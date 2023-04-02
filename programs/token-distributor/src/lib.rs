@@ -122,7 +122,7 @@ pub struct CreateAccounts<'info> {
 #[derive(Accounts)]
 pub struct ClaimAccounts<'info> {
     pub token_mint: Account<'info, Mint>,
-    #[account(mut, token::mint = token_mint, token::authority = user)] //init_if_needed, payer = user, 
+    #[account(mut, token::mint = token_mint, token::authority = user)] 
     pub user_token_account: Account<'info, TokenAccount>,
 
     #[account(mut)]
