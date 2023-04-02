@@ -24,14 +24,14 @@ export const ContentContainer: React.FC<Props> = ({ children }) => {
           </li>
           <li>
           <NavElement
-            label="Home"
+            label="Claim"
             href="/"
           />
           </li>
           <li>
           <NavElement
-            label="Basics"
-            href="/basics"
+            label="Create"
+            href="/create"
           />
           </li>
         </ul>
