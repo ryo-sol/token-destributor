@@ -3,7 +3,7 @@ import { Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction,
 import { FC, useCallback, useState } from 'react';
 import { notify } from "../utils/notifications";
 import { AnchorProvider, Program, Idl} from '@project-serum/anchor';
-import idl from "../../../target/idl/token_distributor.json";
+import idl from "../idl/token_distributor.json";
 // import { TokenDistributor, IDL } from "../../../target/types/token_distributor";
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 import { TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
