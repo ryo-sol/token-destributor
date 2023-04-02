@@ -38,8 +38,6 @@ describe("token-distributor", () => {
   
   it("Is claimed!", async () => {
 
-    const vault = new PublicKey("Aa6tBaPq94Xbaj71KobRi1YNQgKf88m9PDzG6ddAPrMY");
-
     const claimer = new Keypair();
 
     const transferInstr = SystemProgram.transfer({

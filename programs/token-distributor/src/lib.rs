@@ -60,9 +60,9 @@ pub mod token_distributor {
 
     pub fn claim(ctx: Context<ClaimAccounts>) -> Result<()> {
         
-        msg!("My bump is {} ", ctx.accounts.vault.bump);
         msg!("My key is {} ", ctx.accounts.vault.authority.key());
-        msg!("My vault is {} ", ctx.accounts.vault.authority);
+        msg!("My vault is {} ", ctx.accounts.vault.key());
+        msg!("My bump is {} ", ctx.accounts.vault.bump);
 
 
         // transfer claim to user account
