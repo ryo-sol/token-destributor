@@ -2,13 +2,17 @@ import { useAnchorWallet, useConnection, useWallet } from '@solana/wallet-adapte
 import { Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, TransactionMessage, TransactionSignature, VersionedTransaction } from '@solana/web3.js';
 import { FC, useCallback, useState } from 'react';
 import { notify } from "../utils/notifications";
-import { AnchorProvider, Program, Idl} from '@project-serum/anchor';
+import { AnchorProvider, Program, Idl, BN} from '@project-serum/anchor';
 import idl from "../../../target/idl/token_distributor.json";
 // import { TokenDistributor, IDL } from "../../../target/types/token_distributor";
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
-import { TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
 
-export const ClaimFromVault: FC = () => {
+export const CreateVault: FC = () => {
+    const [mintString, setMintString] = useState('');
+    const [totalSupplyString, setTotalSupply] = useState('');
+    const [claimSizeString, setClaimSize] = useState('');
+
     const [vaultString, setVaultString] = useState('');
     
     const { connection } = useConnection();
@@ -35,34 +39,24 @@ export const ClaimFromVault: FC = () => {
             // Create instructions 
             const instructions : TransactionInstruction[] = [];
             
-            const vault = new PublicKey(vaultString); // error handling would be nice
+            const mint = new PublicKey(mintString);
 
-            const vaultAccount = await program.account.vaultAccount.fetch(vault);
-            const mint = vaultAccount.mint as PublicKey;
-
-            const [claimed_pda, _bump] = findProgramAddressSync([Buffer.from("claimed"), publicKey.toBytes(), vault.toBytes()], program.programId);
-            //const ata = await getOrCreateAssociatedTokenAccount(anchor.getProvider().connection, claimer, mint, publicKey);
-            const ata = getAssociatedTokenAddressSync(mint, publicKey);
+            const [vault_pda, _bump] = findProgramAddressSync([Buffer.from("vault"), publicKey.toBytes(), mint.toBytes()], program.programId);
+            setVaultString(vault_pda.toBase58());
             
-            const ataInfo = await connection.getAccountInfo(ata);
+            const ix = await program.methods.create(new BN(totalSupplyString), new BN(claimSizeString))
+            .accounts({
+            payer: publicKey,
+            payerTokenAccount: getAssociatedTokenAddressSync(mint, publicKey),
+            tokenMint: mint,
+            vault: vault_pda,
+            vaultTokenAccount: getAssociatedTokenAddressSync(mint, vault_pda, true),
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId
+            })  
+            .instruction();
 
-            if(!ataInfo){
-                const ataCreateIx = await createAssociatedTokenAccountInstruction(publicKey, ata, publicKey, mint);
-                instructions.push(ataCreateIx);
-            }
-            
-            const ix = await program.methods.claim()
-                .accounts({
-                user: publicKey,
-                tokenMint: mint,
-                vault: vault,
-                vaultTokenAccount: getAssociatedTokenAddressSync(mint, vault, true),
-                userClaimed: claimed_pda,
-                userTokenAccount: ata,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                systemProgram: SystemProgram.programId
-                })  
-                .instruction();
             instructions.push(ix);
             
 
@@ -92,15 +86,27 @@ export const ClaimFromVault: FC = () => {
             console.log('error', `Transaction failed! ${error?.message}`, signature);
             return;
         }
-    }, [publicKey, notify, connection, sendTransaction, vaultString]);
+    }, [publicKey, notify, connection, sendTransaction, mintString, totalSupplyString, claimSizeString]);
 
     return (
         <div className="flex flex-row justify-center">
             <div className="relative group items-center">
-                <label >Vault address:</label>
-            </div>
-            <div className="relative group items-center text-black ">
-                <input type="text" id="vaultInput" name="vaultInput" onChange={e => { setVaultString(e.currentTarget.value); }}/>
+                <label >Token Mint:</label>
+                <input className="text-black" type="text" id="mintInput" name="mintInput"
+                 onChange={e => { setMintString(e.currentTarget.value); }}/>
+                 <br></br>
+                 <label >Total Supply*:</label>
+                 <input className="text-black" type="text" id="supplyInput" name="supplyInput"
+                  onChange={e => { setTotalSupply(e.currentTarget.value); }}/>
+                  <br></br>
+                 <label >Claim Size* (per user)</label>
+                 <input className="text-black" type="text" id="claimInput" name="claimInput"
+                  onChange={e => { setClaimSize(e.currentTarget.value); }}/>
+                  <br></br>
+                 <label >* not accounting for decimals (manually add zeros for each decimal of the token)</label>
+                 <br></br>
+                 <label >Note: ATA for token must exist and contain enough tokens to fund vault</label>
+                 <br></br>
             </div>
             <div className="relative group items-center">
                 <div className="m-1 absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-fuchsia-500 
@@ -114,10 +120,14 @@ export const ClaimFromVault: FC = () => {
                         Wallet not connected
                         </div>
                          <span className="block group-disabled:hidden" >
-                            Claim
+                            Create Vault
                         </span>
                     </button>
-             </div>
+                   
+             </div> 
+                {vaultString &&
+                <span >Your vault will be at: {vaultString}</span>
+                }
         </div>
     );
 };
